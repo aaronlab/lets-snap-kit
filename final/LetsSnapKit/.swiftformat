@@ -1,0 +1,10 @@
+# format options
+--indent 2
+--disable wrapMultilineStatementBraces
+--disable unusedArguments
+
+# wrap
+--maxwidth 100
+
+# file options
+--exclude Pods,Generated
