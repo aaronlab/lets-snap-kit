@@ -14,6 +14,10 @@ import UIKit
 private let menuCollectionViewCellIdentifier = "menuCollectionViewCellIdentifier"
 
 class RootViewController: ViewController {
+  var bag = DisposeBag()
+
+  var offset: [IndexPath: CGFloat] = [:]
+
   var menuCollectionView: UICollectionView!
 
   var menuCollectionViewFlowLayout = UICollectionViewFlowLayout()
@@ -23,8 +27,7 @@ class RootViewController: ViewController {
 
   var scrollView = UIScrollView()
     .then {
-      $0.isScrollEnabled = false
-      $0.showsVerticalScrollIndicator = false
+      $0.isDirectionalLockEnabled = true
       $0.showsHorizontalScrollIndicator = false
     }
 
@@ -51,6 +54,27 @@ class RootViewController: ViewController {
     menuCollectionView?.selectItem(at: IndexPath(item: .zero, section: .zero),
                                    animated: false,
                                    scrollPosition: [])
+
+    scrollView
+      .rx
+      .didScroll
+      .withUnretained(self)
+      .observe(on: MainScheduler.asyncInstance)
+      .bind(onNext: { owner, _ in
+
+        if !owner.scrollView.isDragging, !owner.scrollView.isDecelerating { return }
+
+        guard let currentIndex = owner.menuCollectionView.indexPathsForSelectedItems?.first else {
+          return
+        }
+
+        let width = owner.scrollView.frame.width
+
+        let newX = width * CGFloat(currentIndex.item)
+        owner.scrollView.contentOffset.x = newX
+
+      })
+      .disposed(by: bag)
   }
 
   override func viewDidLayoutSubviews() {
@@ -98,7 +122,7 @@ extension RootViewController {
       loremStackView.addArrangedSubview(loremView)
 
       loremView.snp.makeConstraints {
-        $0.width.equalTo(scrollView)
+        $0.width.equalTo(view.safeAreaLayoutGuide)
       }
     }
   }
@@ -127,7 +151,6 @@ extension RootViewController {
 
     contentView.snp.makeConstraints {
       $0.edges.equalToSuperview()
-      $0.height.equalToSuperview()
     }
 
     loremStackView.snp.makeConstraints {
@@ -184,6 +207,10 @@ extension RootViewController: UICollectionViewDelegateFlowLayout {
 // MARK: - UICollectionViewDelegate
 
 extension RootViewController: UICollectionViewDelegate {
+  func collectionView(_ collectionView: UICollectionView, didDeselectItemAt indexPath: IndexPath) {
+    offset[indexPath] = scrollView.contentOffset.y
+  }
+
   func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
     let newX = scrollView.frame.width * CGFloat(indexPath.item)
 
@@ -193,7 +220,17 @@ extension RootViewController: UICollectionViewDelegate {
                            y: scrollView.contentOffset.y)
 
     DispatchQueue.main.async {
-      self.scrollView.setContentOffset(newPoint, animated: true)
+      UIView.animate(withDuration: 0.2) {
+        self.scrollView.setContentOffset(newPoint, animated: false)
+      } completion: { [weak self] _ in
+        guard let self = self else { return }
+
+        if let offset = self.offset[indexPath] {
+          self.scrollView.contentOffset.y = offset
+        } else {
+          self.scrollView.contentOffset.y = .zero
+        }
+      }
     }
   }
 }

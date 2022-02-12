@@ -21,7 +21,6 @@ class LoremView: UIView {
   var titleLabel = UILabel()
     .then {
       $0.font = .boldSystemFont(ofSize: 18)
-      $0.setContentHuggingPriority(.required, for: .vertical)
     }
 
   var imageView = UIImageView(image: UIImage(named: "image"))
@@ -30,10 +29,10 @@ class LoremView: UIView {
       $0.contentMode = .scaleToFill
     }
 
-  var contentLabel = UITextView()
+  var contentTextview = UITextView()
     .then {
       $0.isEditable = false
-      $0.setContentHuggingPriority(.defaultLow, for: .vertical)
+      $0.isScrollEnabled = false
     }
 
   // MARK: - Init
@@ -56,7 +55,7 @@ class LoremView: UIView {
 extension LoremView {
   func configureView(with lorem: Lorem) {
     titleLabel.text = lorem.title
-    contentLabel.text = lorem.contents
+    contentTextview.text = lorem.contents
   }
 }
 
@@ -66,7 +65,7 @@ extension LoremView {
   private func configureView() {
     addSubview(stackView)
     stackView.addArrangedSubview(titleLabel)
-    stackView.addArrangedSubview(contentLabel)
+    stackView.addArrangedSubview(contentTextview)
     stackView.addArrangedSubview(imageView)
   }
 }
